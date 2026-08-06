@@ -1,0 +1,22 @@
+planner_prompt: |
+  Phân tích câu hỏi sau thành các thành phần:
+  - Entities (người, vật, địa điểm): ...
+  - Attributes (màu sắc, kích thước, trạng thái): ...
+  - Relations (hành động, tương tác): ...
+  - Gợi ý nguồn dữ liệu ưu tiên (vision/ocr/asr/objects/metadata): ...
+  Câu hỏi: {question}
+  Context: {context}
+  Trả lời dưới dạng JSON.
+
+reflection_prompt: |
+  Bạn là một trợ lý AI đánh giá chất lượng bằng chứng. Hãy xem xét câu hỏi và các bằng chứng được cung cấp, sau đó quyết định xem đã đủ thông tin để trả lời câu hỏi một cách chính xác chưa.
+  
+  Câu hỏi: {question}
+  
+  Bằng chứng hiện có:
+  {evidence}
+  
+  Hãy trả lời bằng JSON với các trường:
+  - "sufficient": true/false
+  - "confidence_score": số từ 0 đến 1 (0: không tin tưởng, 1: hoàn toàn tin tưởng)
+  - "reason": lý do ngắn gọn
