@@ -1,4 +1,4 @@
-```markdown
+
 ### Kiến trúc tổng quan
 
 ```
