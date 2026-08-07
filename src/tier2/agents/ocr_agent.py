@@ -10,7 +10,7 @@ from ...config.settings import settings
 class OCRAgent(BaseAgent):
     def __init__(self, top_k: int = 200):
         self.top_k = top_k
-        self.ocr_dir = settings.OBJECT_JSON_DIR  # objects dir chứa OCR? Thực tế OCR có thể ở thư mục riêng, tạm dùng object dir
+        self.ocr_dir = settings.OCR_DIR or settings.OBJECT_JSON_DIR
     
     def get_source_name(self) -> str:
         return "ocr"

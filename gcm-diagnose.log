@@ -1,0 +1,194 @@
+﻿Diagnose log at 2026-08-07T16:50:04Z
+
+AppPath: C:\Program Files\Git\mingw64\bin\git-credential-manager.exe
+InstallDir: C:\Program Files\Git\mingw64\bin\
+Version: 2.6.1+786ab03440ddc82e807a97c0e540f5247e44cec6
+
+------------
+Diagnostic: Environment
+Skipped: False
+Success: True
+Exception: None
+Log:
+OSType: Windows
+OSVersion: 10.0 (build 26200)
+Reading environment variables... OK
+ Variables:
+HOMEPATH=\Users\Asus
+DriverData=C:\Windows\System32\Drivers\DriverData
+COMPUTERNAME=LAPTOP-3PJ4P49U
+GIT_TRACE2_PARENT_SID=7b99e7e1-818e-4fa8-8c2d-914cde3174e9
+CommonProgramFiles(x86)=C:\Program Files (x86)\Common Files
+ProgramW6432=C:\Program Files
+OneDrive=C:\Users\Asus\OneDrive
+ChocolateyLastPathUpdate=134236811025387316
+EnableLog=INFO
+EFC_32452_1592913036=1
+ProgramFiles(x86)=C:\Program Files (x86)
+EFC_32452_4126798990=1
+PROCESSOR_REVISION=4401
+Path=C:/Program Files/Git/mingw64/libexec/git-core;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Users\Asus\bin;C:\Users\Asus\miniconda3\condabin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Program Files\NVIDIA Corporation\NVIDIA App\NvDLISR;C:\Program Files\Git\cmd;C:\Program Files\dotnet\;C:\Program Files\nodejs\;C:\ProgramData\chocolatey\bin;C:\Program Files\Tailscale\;C:\Users\Asus\AppData\Local\Programs\Python\Python312\Scripts\;C:\Users\Asus\AppData\Local\Programs\Python\Python312\;C:\Users\Asus\AppData\Local\Microsoft\WindowsApps;C:\Users\Asus\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\Asus\AppData\Roaming\npm;C:\Users\Asus\AppData\Local\Programs\DockerDesktop\resources\bin
+GIT_EXEC_PATH=C:/Program Files/Git/mingw64/libexec/git-core
+TEMP=C:\Users\Asus\AppData\Local\Temp
+LOCALAPPDATA=C:\Users\Asus\AppData\Local
+MSYSTEM=MINGW64
+TERM=xterm-256color
+COLORTERM=truecolor
+windir=C:\WINDOWS
+USERDOMAIN=LAPTOP-3PJ4P49U
+CONDA_SHLVL=0
+EFC_32452_344590478=1
+PROCESSOR_LEVEL=25
+PROCESSOR_IDENTIFIER=AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD
+TMPDIR=C:\Users\Asus\AppData\Local\Temp
+PROMPT=$P$G
+CONDA_EXE=C:\Users\Asus\miniconda3\Scripts\conda.exe
+PUBLIC=C:\Users\Public
+NUMBER_OF_PROCESSORS=12
+SESSIONNAME=Console
+CommonProgramFiles=C:\Program Files (x86)\Common Files
+TMP=C:\Users\Asus\AppData\Local\Temp
+PLINK_PROTOCOL=ssh
+ProgramData=C:\ProgramData
+ProgramFiles=C:\Program Files (x86)
+ACSvcPort=17532
+ChocolateyInstall=C:\ProgramData\chocolatey
+RlsSvcPort=22112
+PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC
+HOME=C:\Users\Asus
+LC_CTYPE=C.UTF-8
+CommonProgramW6432=C:\Program Files\Common Files
+LOGONSERVER=\\LAPTOP-3PJ4P49U
+USERPROFILE=C:\Users\Asus
+SystemRoot=C:\WINDOWS
+CONDA_BAT=C:\Users\Asus\miniconda3\condabin\conda.bat
+USERDOMAIN_ROAMINGPROFILE=LAPTOP-3PJ4P49U
+APPDATA=C:\Users\Asus\AppData\Roaming
+HOMEDRIVE=C:
+ACSetupSvcPort=23210
+PSModulePath=C:\Program Files\WindowsPowerShell\Modules;C:\WINDOWS\system32\WindowsPowerShell\v1.0\Modules
+USERNAME=Asus
+PROCESSOR_ARCHITEW6432=AMD64
+PROCESSOR_ARCHITECTURE=x86
+OS=Windows_NT
+ComSpec=C:\WINDOWS\system32\cmd.exe
+SystemDrive=C:
+PT8HOME=D:\Luan\Study\PacketTracer\Cisco Packet Tracer 9.0.0
+OneDriveConsumer=C:\Users\Asus\OneDrive
+ALLUSERSPROFILE=C:\ProgramData
+
+
+------------
+Diagnostic: File system
+Skipped: False
+Success: True
+Exception: None
+Log:
+Temporary directory is 'C:\Users\Asus\AppData\Local\Temp\'...
+Checking basic file I/O...
+Writing to temporary file 'C:\Users\Asus\AppData\Local\Temp\e45b4031b1364d6bd3120812'... OK
+Reading from temporary file 'C:\Users\Asus\AppData\Local\Temp\e45b4031b1364d6bd3120812'... OK
+Deleting temporary file 'C:\Users\Asus\AppData\Local\Temp\e45b4031b1364d6bd3120812'... OK
+Testing IFileSystem instance...
+UserHomePath: C:\Users\Asus
+UserDataDirectoryPath: C:\Users\Asus\.gcm
+GetCurrentDirectory(): D:\Luan\Study\Ai challenge 2026\VQA-main
+
+------------
+Diagnostic: Networking
+Skipped: False
+Success: True
+Exception: None
+Log:
+Checking networking and HTTP stack...
+Creating HTTP client... OK
+IsNetworkAvailable: True
+Sending HEAD request to http://example.com...Sending HEAD request to https://example.com... OK
+ OK
+Acquiring free TCP port... OK
+Testing local HTTP loopback connections...
+Creating new HTTP listener for http://localhost:63961/... OK
+Waiting for loopback connection... OK
+Writing response... OK
+Waiting for response data... OK
+Loopback connection data OK
+
+------------
+Diagnostic: Git
+Skipped: False
+Success: True
+Exception: None
+Log:
+Getting Git version... OK
+Git version is '2.52.0.windows.1'
+Locating current repository...Git repository at 'D:/Luan/Study/Ai challenge 2026/VQA-main/.git'
+ OK
+Listing all Git configuration... OK
+Git configuration:
+file:C:/Program Files/Git/etc/gitconfig	diff.astextplain.textconv=astextplain
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.clean=git-lfs clean -- %f
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.smudge=git-lfs smudge -- %f
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.process=git-lfs filter-process
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.required=true
+file:C:/Program Files/Git/etc/gitconfig	http.sslbackend=schannel
+file:C:/Program Files/Git/etc/gitconfig	core.autocrlf=true
+file:C:/Program Files/Git/etc/gitconfig	core.fscache=true
+file:C:/Program Files/Git/etc/gitconfig	core.symlinks=false
+file:C:/Program Files/Git/etc/gitconfig	pull.rebase=false
+file:C:/Program Files/Git/etc/gitconfig	credential.helper=manager
+file:C:/Program Files/Git/etc/gitconfig	credential.https://dev.azure.com.usehttppath=true
+file:C:/Program Files/Git/etc/gitconfig	init.defaultbranch=master
+file:C:/Users/Asus/.gitconfig	filter.lfs.smudge=git-lfs smudge -- %f
+file:C:/Users/Asus/.gitconfig	filter.lfs.process=git-lfs filter-process
+file:C:/Users/Asus/.gitconfig	filter.lfs.required=true
+file:C:/Users/Asus/.gitconfig	filter.lfs.clean=git-lfs clean -- %f
+file:C:/Users/Asus/.gitconfig	user.name=LuanLuKim
+file:C:/Users/Asus/.gitconfig	user.email=kimluanlu95@gmail.com
+file:C:/Users/Asus/.gitconfig	core.editor="C:\Users\Asus\AppData\Local\Programs\Microsoft VS Code\bin\code" --wait
+file:C:/Users/Asus/.gitconfig	core.autocrlf=true
+file:C:/Users/Asus/.gitconfig	credential.helper=manager
+file:.git/config	core.repositoryformatversion=0
+file:.git/config	core.filemode=false
+file:.git/config	core.bare=false
+file:.git/config	core.logallrefupdates=true
+file:.git/config	core.symlinks=false
+file:.git/config	core.ignorecase=true
+file:.git/config	remote.origin.url=https://github.com/nguyenanhnguyen/VQA
+file:.git/config	remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
+
+
+------------
+Diagnostic: Credential storage
+Skipped: False
+Success: True
+Exception: None
+Log:
+ICredentialStore instance is of type: CredentialStore
+Writing test credential... OK
+Reading test credential... OK
+Deleting test credential... OK
+
+------------
+Diagnostic: Microsoft authentication (AAD/MSA)
+Skipped: False
+Success: True
+Exception: None
+Log:
+Broker is not enabled.
+Flow type is: Auto
+Gathering MSAL token cache data... OK
+CacheDirectory: C:\Users\Asus\AppData\Local\.IdentityService
+CacheFileName: msal.cache
+CacheFilePath: C:\Users\Asus\AppData\Local\.IdentityService\msal.cache
+Creating cache helper... OK
+Verifying MSAL token cache persistence... OK
+
+------------
+Diagnostic: GitHub API
+Skipped: False
+Success: True
+Exception: None
+Log:
+Using 'https://github.com/' as API target.
+Querying '/meta' endpoint... OK
+

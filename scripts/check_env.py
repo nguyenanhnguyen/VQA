@@ -12,6 +12,9 @@ Kiểm tra toàn bộ biến môi trường + kết nối cần thiết TRƯỚC
 import sys
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 sys.path.append(str(Path(__file__).parent.parent))
 
 
@@ -19,11 +22,9 @@ def check_env() -> bool:
     print("Kiểm tra cấu hình môi trường VQA module...\n")
     ok = True
 
-    # 1) Import settings -- việc này TỰ FAIL nếu thiếu biến bắt buộc (KEYFRAME_DIR...)
-    #    nhờ field_validator trong config/settings.py, nên bọc try/except để in
-    #    message rõ ràng thay vì traceback khó đọc.
     try:
-        from config.settings import settings
+        from config.settings import settings, apply_cli_overrides
+        apply_cli_overrides()
         print("[OK] Đọc config/settings.py thành công (đủ biến bắt buộc).")
     except Exception as e:
         print(f"[FAIL] Thiếu/sai biến môi trường bắt buộc:\n  {e}")

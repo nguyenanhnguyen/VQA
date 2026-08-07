@@ -1,5 +1,5 @@
-# === Core ML (version theo đúng yêu cầu chính thức của Qwen3-VL-Embedding README) ===
-torch==2.8.0
+# === Core ML ===
+torch>=2.4.0
 transformers>=4.57.0
 qwen-vl-utils>=0.0.14
 accelerate>=1.1.1
@@ -23,9 +23,9 @@ pymongo>=4.9.0
 openai>=1.54.0
 google-generativeai>=0.8.0
 
-# === OCR / Object detection (xem câu hỏi context — cần xác nhận checkpoint) ===
+# === OCR / Object detection ===
 paddleocr>=2.9.0
-paddlepaddle-gpu  # bản GPU, cần đúng version CUDA của server (xem HUONG_DAN_DOCKER.md pattern cũ)
+paddlepaddle>=2.6.0
 ultralytics>=8.3.0  # YOLO-World
 
 # === Utils ===

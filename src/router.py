@@ -1,27 +1,19 @@
 """
 src/router.py
 ===============
-Adaptive Router (theo Adaptive-RAG) — quyết định câu hỏi đi Tier 0 (nhanh,
-1 bước retrieval) hay Tier 2 (Agentic, nhiều bước).
-
-QUYẾT ĐỊNH THIẾT KẾ: viết 2 lớp router, chọn qua config, để hệ thống CHẠY
-ĐƯỢC ngay cả khi chưa có API key LLM (heuristic), đồng thời cho phép nâng
-cấp lên LLM-based khi đã có key — không block việc build/test các phần khác.
-
-  - HeuristicRouter (mặc định): rule-based, không cần LLM, không tốn latency.
-  - LLMRouter (tuỳ chọn): dùng model nhỏ (Gemini-2.5-Flash-Lite) để phân loại,
-    CẦN GEMINI_API_KEY. Bật bằng ROUTER_LLM_MODEL trong .env + gọi
-    LLMRouter thay vì HeuristicRouter trong main.py.
-
-CHƯA CÓ: ngưỡng độ phức tạp (ROUTER_COMPLEXITY_THRESHOLD) hiện là placeholder
-0.5, phải hiệu chỉnh lại bằng bộ 30 câu hỏi thật ở VQA-T07.
+Gate A Router (Cascade Redesign):
+Phân loại câu hỏi tại Gate A thành:
+  - `tier0`: Có thể trả lời từ dữ liệu cấu trúc (OCR text, ASR speech, Metadata, Object presence/count).
+  - `tier2`: Cần suy luận thị giác/không gian phức tạp (Spatial relations, complex action recognition, mood/emotion).
 """
 
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Optional
 
 from config.settings import settings
+from .query_refiner import RefinedQuery
 
 
 @dataclass
@@ -31,56 +23,70 @@ class RoutingDecision:
     reason: str
 
 
-# Các dấu hiệu cho thấy câu hỏi cần suy luận đa bước (multi-hop) -> Tier 2
-MULTI_HOP_MARKERS = [
-    r"\bsau đó\b", r"\btrước khi\b", r"\btiếp theo\b", r"\bkế tiếp\b",
-    r"\bvà sau\b", r"\bbao nhiêu\b", r"\bđếm\b", r"\bai là người\b",
-    r"\bthen\b", r"\bafter\b", r"\bbefore\b", r"\bhow many\b", r"\bcount\b",
+# Từ khóa cho câu hỏi cần suy luận thị giác/không gian phức tạp -> Tier 2
+VISUAL_REASONING_MARKERS = [
+    r"\bbên trái\b", r"\bbên phải\b", r"\bở giữa\b", r"\bphía trên\b", r"\bphía dưới\b",
+    r"\bđang làm gì\b", r"\bhành động\b", r"\bcảm xúc\b", r"\bkhông gian\b",
+    r"\bleft of\b", r"\bright of\b", r"\babove\b", r"\bbelow\b", r"\bdoing what\b",
+    r"\baction\b", r"\bmood\b", r"\brelationship\b"
+]
+
+# Từ khóa cho câu hỏi trả lời được từ dữ liệu cấu trúc (OCR/ASR/Metadata/Object) -> Tier 0
+STRUCTURED_EVIDENCE_MARKERS = [
+    r"\bchữ\b", r"\bbiển báo\b", r"\bdòng chữ\b", r"\bviết\b", r"\btext\b", r"\breads\b",
+    r"\bnói gì\b", r"\blời thoại\b", r"\bphát biểu\b", r"\bspeech\b", r"\bsaid\b",
+    r"\btiêu đề\b", r"\btên kênh\b", r"\bngày đăng\b", r"\btitle\b", r"\bchannel\b",
+    r"\bbao nhiêu\b", r"\bmấy\b", r"\bhow many\b"
 ]
 
 
 class BaseRouter(ABC):
     @abstractmethod
-    def route(self, question: str) -> RoutingDecision:
+    def route(self, question: str, refined_query: Optional[RefinedQuery] = None) -> RoutingDecision:
         ...
 
 
-class HeuristicRouter(BaseRouter):
-    """Rule-based: không cần LLM, chạy được ngay không phụ thuộc API key."""
+class GateARouter(BaseRouter):
+    """Gate A Router: Rule-based heuristic phân loại dựa trên intent & keywords."""
 
-    def route(self, question: str) -> RoutingDecision:
+    def route(self, question: str, refined_query: Optional[RefinedQuery] = None) -> RoutingDecision:
         q_lower = question.lower()
 
-        marker_hits = sum(1 for pat in MULTI_HOP_MARKERS if re.search(pat, q_lower))
-        word_count = len(question.split())
+        # 1. Nếu có refined_query, ưu tiên target_attribute
+        if refined_query:
+            attr = refined_query.target_attribute
+            if attr in ["text_ocr", "speech_asr", "metadata", "object_count"]:
+                return RoutingDecision(
+                    tier="tier0",
+                    complexity_score=0.2,
+                    reason=f"Refined intent '{attr}' is structured evidence answerable."
+                )
+            elif attr in ["action"]:
+                return RoutingDecision(
+                    tier="tier2",
+                    complexity_score=0.8,
+                    reason=f"Refined intent '{attr}' requires visual action reasoning."
+                )
 
-        # Heuristic thô: câu hỏi dài + có marker suy luận nhiều bước -> phức tạp.
-        # (Đây là baseline tạm thời, CẦN thay bằng số liệu thật từ benchmark)
-        score = min(1.0, 0.15 * marker_hits + 0.02 * word_count)
+        # 2. Heuristic check trên từ khóa
+        vis_hits = sum(1 for pat in VISUAL_REASONING_MARKERS if re.search(pat, q_lower))
+        struct_hits = sum(1 for pat in STRUCTURED_EVIDENCE_MARKERS if re.search(pat, q_lower))
 
-        tier = "tier2" if score >= settings.ROUTER_COMPLEXITY_THRESHOLD else "tier0"
-        reason = f"marker_hits={marker_hits}, word_count={word_count}, score={score:.2f}"
+        score = min(1.0, 0.4 * vis_hits - 0.3 * struct_hits + 0.3)
+
+        if vis_hits > struct_hits:
+            tier = "tier2"
+            reason = f"Visual reasoning markers ({vis_hits}) exceed structured markers ({struct_hits})"
+        elif struct_hits > 0:
+            tier = "tier0"
+            reason = f"Structured evidence markers ({struct_hits}) present"
+        else:
+            tier = "tier0" if score < 0.6 else "tier2"
+            reason = f"Default routing threshold check score={score:.2f}"
+
         return RoutingDecision(tier=tier, complexity_score=score, reason=reason)
 
 
-class LLMRouter(BaseRouter):
-    """
-    Dùng LLM nhỏ để phân loại độ phức tạp câu hỏi.
-    YÊU CẦU: GEMINI_API_KEY (hoặc provider khác) đã cấu hình trong .env.
-    Hiện để interface sẵn, implementation gọi API thật cần xác nhận
-    provider/SDK chính thức nhóm dùng (xem câu hỏi cuối cuộc trò chuyện).
-    """
-
-    def __init__(self):
-        raise NotImplementedError(
-            "LLMRouter cần xác nhận: (1) provider LLM thật (OpenAI/Gemini/nội bộ), "
-            "(2) SDK/cách gọi API đã có trong hệ thống chưa. Xem phần câu hỏi context."
-        )
-
-    def route(self, question: str) -> RoutingDecision:
-        raise NotImplementedError
-
-
 def get_router() -> BaseRouter:
-    """Factory — main.py gọi hàm này thay vì new trực tiếp, dễ đổi router sau."""
-    return HeuristicRouter()
+    """Factory return Gate A Router."""
+    return GateARouter()

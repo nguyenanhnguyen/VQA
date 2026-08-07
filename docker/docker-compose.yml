@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  vqa-module:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: vqa-module
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+      - CUDA_VISIBLE_DEVICES=0
+      - LOG_LEVEL=INFO
+    volumes:
+      - ..:/app
+      - ../.cache:/app/.cache
+      - ${DATA_ROOT:-/data}:/data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

@@ -1,3 +1,9 @@
+"""
+src/main.py
+============
+Main API Service - VQA Module (Cascade Redesign Architecture)
+"""
+
 import time
 from fastapi import FastAPI
 from typing import List, Dict, Any
@@ -5,16 +11,20 @@ from typing import List, Dict, Any
 from .schemas.request import VQARequest
 from .schemas.response import VQAResponse, Candidate, Evidence, VQAError
 from .router import get_router
-from .tier0 import tier0_search
-from .tier2 import iterative_retrieval, generate_answer_for_candidate
+from .tier0 import tier0_search, synthesize_tier0_answer
+from .tier2 import iterative_retrieval, generate_answer_for_candidate, light_verify_candidate
+from .confidence import evaluate_gate_b_confidence
+from .query_refiner import get_query_refiner
 from .utils.logging import logger
 from .utils.metrics import metrics
-from .config.settings import settings
+from .config.settings import settings, apply_cli_overrides
 
-app = FastAPI(title="VQA Module", version="1.0.0")
+# Tự động áp dụng CLI overrides (nếu có truyền --data, --keyframe, --ocr...)
+apply_cli_overrides()
 
-# Router khởi tạo 1 lần lúc import module (HeuristicRouter không cần kết nối
-# gì cả nên an toàn để tạo eager ở đây, khác Milvus/model phải lazy).
+app = FastAPI(title="VQA Module", version="2.0.0")
+
+# Router khởi tạo 1 lần lúc import module
 router = get_router()
 
 
@@ -24,9 +34,7 @@ async def health():
 
 
 def _build_evidence(candidate: Dict[str, Any]) -> Evidence:
-    """Chuyển 1 candidate dict (từ tier0/tier2) thành đúng Evidence schema.
-    Evidence.type là field bắt buộc -- suy ra từ 'source' nếu agent có gắn,
-    mặc định 'fusion' vì candidate thường đã qua RRF gộp nhiều nguồn."""
+    """Chuyển 1 candidate dict thành đúng Evidence schema."""
     return Evidence(
         type=candidate.get("source", "fusion"),
         description=candidate.get("description"),
@@ -40,42 +48,79 @@ async def vqa_query(request: VQARequest):
     start_time = time.time()
     logger.info(f"Received request {request.request_id}: {request.question[:100]}...")
 
-    # tier mặc định để dùng luôn cả trong except block nếu crash trước khi router chạy xong
     tier_attempted = "tier0"
 
     try:
-        tier_attempted = router.route(request.question).tier if request.tier == "auto" else request.tier
-        logger.info(f"Route: {tier_attempted}")
+        # 1. Bilingual Query Refinement
+        refiner = get_query_refiner()
+        refined_query = refiner.refine(request.question)
+
+        # 2. Gate A Router Classification
+        routing = router.route(request.question, refined_query=refined_query)
+        tier_attempted = routing.tier if request.tier == "auto" else request.tier
+        logger.info(f"Gate A Route decision: {tier_attempted} ({routing.reason})")
         metrics.record("tier", tier_attempted)
 
         answer: str = None
         confidence: float = 0.0
-        evidence_records: List[dict] = []
 
         if tier_attempted == "tier0":
+            # 3. Tier 0 Multi-Agent Retrieval
             candidates = tier0_search(
                 question=request.question,
                 max_results=request.max_results,
                 video_filter=request.video_filter,
+                refined_query=refined_query
             )
+
             if candidates:
                 top = candidates[0]
-                answer = generate_answer_for_candidate(request.question, top)
-                confidence = top.get("score", 0.5)
+                # Fast Text-LLM Fact Synthesis (No VLM!)
+                answer = synthesize_tier0_answer(request.question, top, refined_query=refined_query)
+
+                # 4. Gate B Evidence-level Confidence Evaluator
+                gate_b = evaluate_gate_b_confidence(request.question, candidates, refined_query=refined_query)
+                confidence = gate_b.confidence_score
+
+                # Escalation check
+                if gate_b.should_escalate:
+                    logger.info(f"Gate B triggered escalation to Tier 2 (confidence={confidence:.2f})")
+                    tier_attempted = "tier2_escalated"
+
+                    # 5. Tier 2 Stage 1: Light Verify (1-frame fast VLM check)
+                    verified, v_answer, v_conf = light_verify_candidate(request.question, top, answer)
+
+                    if verified:
+                        logger.info("LightVerify confirmed Tier 0 answer.")
+                        answer = v_answer
+                        confidence = v_conf
+                    else:
+                        logger.info("LightVerify unsure. Falling back to Full Agentic Pipeline.")
+                        result = iterative_retrieval(
+                            question=request.question,
+                            context_hints=request.context_hints,
+                            max_iterations=3,
+                        )
+                        tier2_candidates = result.get("candidates", [])
+                        if tier2_candidates:
+                            candidates = tier2_candidates
+                            answer = generate_answer_for_candidate(request.question, candidates[0])
+                            confidence = result.get("confidence", 0.5)
+
         else:
+            # Direct Tier 2: Full Agentic Pipeline
             result = iterative_retrieval(
                 question=request.question,
                 context_hints=request.context_hints,
                 max_iterations=3,
             )
             candidates = result.get("candidates", [])
-            evidence_records = result.get("evidence", [])
             if candidates:
                 top = candidates[0]
                 answer = generate_answer_for_candidate(request.question, top)
                 confidence = result.get("confidence", 0.5)
             else:
-                answer = None  # KHÔNG bịa câu trả lời khi không có candidate (VQA-T12 fallback)
+                answer = None
                 confidence = 0.0
 
         response_candidates = []

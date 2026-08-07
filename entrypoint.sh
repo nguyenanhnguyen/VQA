@@ -1,18 +1,35 @@
 #!/bin/bash
-# entrypoint.sh
-# ==============
-# Chạy check_env.py trước để fail-fast rõ ràng nếu thiếu config, CHỈ SAU KHI
-# check thành công mới "exec" sang lệnh thật (uvicorn) truyền vào CMD.
-#
-# "exec" (không phải chạy như subprocess con) quan trọng vì nó thay thế hẳn
-# tiến trình shell hiện tại bằng uvicorn -- giữ đúng PID 1, để Docker gửi được
-# tín hiệu dừng (SIGTERM khi `docker stop`) thẳng tới uvicorn thay vì bị kẹt
-# ở tiến trình bash trung gian.
-
+# =============================================================================
+# entrypoint.sh - VQA Module Entrypoint
+# =============================================================================
 set -e
 
-echo "[entrypoint] Kiểm tra cấu hình môi trường..."
-python scripts/check_env.py
+# Tự động cập nhật requirements.txt nếu có thay đổi mà KHÔNG CẦN rebuild Docker Image
+if [ -f "/app/requirements.txt" ]; then
+    mkdir -p /app/.cache
+    HASH_FILE="/app/.cache/.requirements.hash"
+    CURRENT_HASH=""
+    if command -v md5sum >/dev/null 2>&1; then
+        CURRENT_HASH=$(md5sum /app/requirements.txt | awk '{print $1}')
+    elif command -v sha256sum >/dev/null 2>&1; then
+        CURRENT_HASH=$(sha256sum /app/requirements.txt | awk '{print $1}')
+    fi
 
-echo "[entrypoint] Cấu hình hợp lệ. Khởi động service..."
+    PREV_HASH=""
+    [ -f "$HASH_FILE" ] && PREV_HASH=$(cat "$HASH_FILE")
+
+    if [ -n "$CURRENT_HASH" ] && [ "$CURRENT_HASH" != "$PREV_HASH" ]; then
+        echo "[entrypoint] Phát hiện requirements.txt thay đổi. Đang cài đặt dependencies..."
+        pip install --no-cache-dir -r /app/requirements.txt
+        echo "$CURRENT_HASH" > "$HASH_FILE"
+        echo "[entrypoint] Cài đặt dependencies hoàn tất!"
+    else
+        echo "[entrypoint] requirements.txt không thay đổi. Bỏ qua pip install."
+    fi
+fi
+
+echo "[entrypoint] Kiểm tra cấu hình môi trường..."
+python scripts/check_env.py "$@"
+
+echo "[entrypoint] Khởi động service..."
 exec "$@"
