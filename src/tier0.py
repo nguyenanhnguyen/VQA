@@ -64,18 +64,18 @@ def tier0_search(
 
     # 2. ASR agent search
     asr_agent = ASRAgent(top_k=50)
-    asr_candidates = asr_agent.search(question, video_filter=video_filter)
+    asr_candidates = asr_agent.search(question, video_filter=video_filter, refined_query=refined_query)
 
     # 3. Metadata agent search
     meta_agent = MetadataAgent(top_k=50)
-    meta_candidates = meta_agent.search(question, video_filter=video_filter)
+    meta_candidates = meta_agent.search(question, video_filter=video_filter, refined_query=refined_query)
 
     # 4. OCR & Object agents
     ocr_agent = OCRAgent(top_k=50)
-    ocr_candidates = ocr_agent.search(question, video_filter=video_filter)
+    ocr_candidates = ocr_agent.search(question, video_filter=video_filter, refined_query=refined_query)
 
     obj_agent = ObjectAgent(top_k=50)
-    obj_candidates = obj_agent.search(question, video_filter=video_filter)
+    obj_candidates = obj_agent.search(question, video_filter=video_filter, refined_query=refined_query)
 
     # Gộp danh sách ứng viên qua RRF Fusion
     ranked = reciprocal_rank_fusion([
