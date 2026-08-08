@@ -2,15 +2,14 @@
 src/tier0.py
 ===============
 Tier 0 Search & Fact Synthesizer (Cascade Redesign):
-- Sử dụng CLIP search + Multi-Agent retrieval.
+- Sử dụng VisionAgent + Multi-Agent retrieval.
 - Dùng Text-only LLM tổng hợp câu trả lời từ các bằng chứng (transcripts, OCR, metadata).
 - KHÔNG gọi VLM (Vision Language Model) xử lý ảnh -> Đảm bảo độ trễ siêu thấp (<1s).
 """
 
 from typing import List, Dict, Any, Optional
-from .database.milvus_client import get_milvus_client
-from .models.clip_loader import get_clip_loader
 from .tier2.fusion import reciprocal_rank_fusion
+from .tier2.agents.vision_agent import VisionAgent
 from .tier2.agents.asr_agent import ASRAgent
 from .tier2.agents.metadata_agent import MetadataAgent
 from .tier2.agents.ocr_agent import OCRAgent
@@ -28,7 +27,7 @@ def tier0_search(
 ) -> List[Dict[str, Any]]:
     """
     Thực hiện truy xuất đa nguồn cho Tier 0:
-    1. Vision (CLIP vector search trong Milvus bằng refined visual_query)
+    1. Vision (CLIP vector search với sub-queries decomposition)
     2. ASR (Speech transcripts bằng keywords)
     3. Metadata (Title/Description bằng keywords)
     4. OCR & Object agents
@@ -38,29 +37,11 @@ def tier0_search(
         refiner = get_query_refiner()
         refined_query = refiner.refine(question)
 
-    logger.info(f"Tier0: searching for visual_query='{refined_query.visual_query_en}'")
+    logger.info(f"Tier0 searching: canonical='{refined_query.analysis.canonical_question}' | sub_queries={refined_query.decomposition.sub_queries}")
 
-    # 1. Vision agent (CLIP + Milvus)
-    embedder = get_clip_loader()
-    search_prompt = refined_query.visual_query_en or refined_query.visual_query_vi
-    query_vector = embedder.encode_text(search_prompt)[0].tolist()
-
-    expr = None
-    if video_filter:
-        video_list = ", ".join([f"'{v}'" for v in video_filter])
-        expr = f"video_id in [{video_list}]"
-
-    milvus = get_milvus_client()
-    vision_hits = milvus.search(query_vector, top_k=max_results, expr=expr)
-
-    vision_candidates = []
-    for hit in vision_hits:
-        vision_candidates.append({
-            "video_id": hit.entity.get("video_id", ""),
-            "frame_id": hit.entity.get("frame_id", 0),
-            "score": hit.score,
-            "source": "clip",
-        })
+    # 1. Vision agent (CLIP vector search with sub-queries)
+    vision_agent = VisionAgent(top_k=max_results)
+    vision_candidates = vision_agent.search(question, video_filter=video_filter, refined_query=refined_query)
 
     # 2. ASR agent search
     asr_agent = ASRAgent(top_k=50)
@@ -78,9 +59,11 @@ def tier0_search(
     obj_candidates = obj_agent.search(question, video_filter=video_filter, refined_query=refined_query)
 
     # Gộp danh sách ứng viên qua RRF Fusion
-    ranked = reciprocal_rank_fusion([
-        vision_candidates, asr_candidates, meta_candidates, ocr_candidates, obj_candidates
-    ], top_k=max_results)
+    agent_results = [lst for lst in [vision_candidates, asr_candidates, meta_candidates, ocr_candidates, obj_candidates] if lst]
+    if not agent_results:
+        return []
+
+    ranked = reciprocal_rank_fusion(agent_results, top_k=max_results)
 
     return ranked
 

@@ -19,10 +19,10 @@ from .utils.logging import logger
 from .utils.metrics import metrics
 from .config.settings import settings, apply_cli_overrides
 
-# Tự động áp dụng CLI overrides (nếu có truyền --data, --keyframe, --ocr...)
+# Tự động áp dụng CLI overrides
 apply_cli_overrides()
 
-app = FastAPI(title="VQA Module", version="2.0.0")
+app = FastAPI(title="VQA Module", version="2.1.0")
 
 # Router khởi tạo 1 lần lúc import module
 router = get_router()
@@ -51,11 +51,11 @@ async def vqa_query(request: VQARequest):
     tier_attempted = "tier0"
 
     try:
-        # 1. Bilingual Query Refinement
+        # 1. LLM Query Understanding & Query Decomposition
         refiner = get_query_refiner()
-        refined_query = refiner.refine(request.question)
+        refined_query = refiner.refine(request.question, context_hints=request.context_hints)
 
-        # 2. Gate A Router Classification
+        # 2. Gate A Router Classification (Rule-based Heuristic constraint maintained)
         routing = router.route(request.question, refined_query=refined_query)
         tier_attempted = routing.tier if request.tier == "auto" else request.tier
         logger.info(f"Gate A Route decision: {tier_attempted} ({routing.reason})")
@@ -65,7 +65,7 @@ async def vqa_query(request: VQARequest):
         confidence: float = 0.0
 
         if tier_attempted == "tier0":
-            # 3. Tier 0 Multi-Agent Retrieval
+            # 3. Tier 0 Multi-Agent Retrieval with Query Decomposition
             candidates = tier0_search(
                 question=request.question,
                 max_results=request.max_results,
@@ -100,6 +100,7 @@ async def vqa_query(request: VQARequest):
                             question=request.question,
                             context_hints=request.context_hints,
                             max_iterations=3,
+                            refined_query=refined_query
                         )
                         tier2_candidates = result.get("candidates", [])
                         if tier2_candidates:
@@ -108,11 +109,12 @@ async def vqa_query(request: VQARequest):
                             confidence = result.get("confidence", 0.5)
 
         else:
-            # Direct Tier 2: Full Agentic Pipeline
+            # Direct Tier 2: Full Agentic Pipeline with Query Decomposition
             result = iterative_retrieval(
                 question=request.question,
                 context_hints=request.context_hints,
                 max_iterations=3,
+                refined_query=refined_query
             )
             candidates = result.get("candidates", [])
             if candidates:

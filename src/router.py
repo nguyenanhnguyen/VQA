@@ -5,6 +5,8 @@ Gate A Router (Cascade Redesign):
 Phân loại câu hỏi tại Gate A thành:
   - `tier0`: Có thể trả lời từ dữ liệu cấu trúc (OCR text, ASR speech, Metadata, Object presence/count).
   - `tier2`: Cần suy luận thị giác/không gian phức tạp (Spatial relations, complex action recognition, mood/emotion).
+
+Maintain strict heuristic rule-based routing constraint while supporting new LLM RefinedQuery schema.
 """
 
 import re
@@ -47,28 +49,31 @@ class BaseRouter(ABC):
 
 
 class GateARouter(BaseRouter):
-    """Gate A Router: Rule-based heuristic phân loại dựa trên intent & keywords."""
+    """Gate A Router: Rule-based heuristic phân loại dựa trên intent & keywords & modalities."""
 
     def route(self, question: str, refined_query: Optional[RefinedQuery] = None) -> RoutingDecision:
         q_lower = question.lower()
 
-        # 1. Nếu có refined_query, ưu tiên target_attribute
+        # 1. Nếu có refined_query, kiểm tra modalities và intent từ Question Analysis
         if refined_query:
-            attr = refined_query.target_attribute
-            if attr in ["text_ocr", "speech_asr", "metadata", "object_count"]:
+            mods = getattr(refined_query.analysis, "modalities", [])
+            intent = getattr(refined_query.analysis, "intent", "")
+
+            # Ưu tiên Tier 0 cho các modalities cấu trúc thuần túy
+            if any(m in mods for m in ["ocr", "asr", "metadata"]) or intent in ["text_reading", "speech_content", "object_count"]:
                 return RoutingDecision(
                     tier="tier0",
                     complexity_score=0.2,
-                    reason=f"Refined intent '{attr}' is structured evidence answerable."
+                    reason=f"Refined modalities {mods} / intent '{intent}' can be answered via structured Tier0 agents."
                 )
-            elif attr in ["action"]:
+            elif intent in ["action", "temporal_event", "location"]:
                 return RoutingDecision(
                     tier="tier2",
                     complexity_score=0.8,
-                    reason=f"Refined intent '{attr}' requires visual action reasoning."
+                    reason=f"Refined intent '{intent}' requires visual reasoning/temporal context (Tier2)."
                 )
 
-        # 2. Heuristic check trên từ khóa
+        # 2. Heuristic check trên từ khóa gốc
         vis_hits = sum(1 for pat in VISUAL_REASONING_MARKERS if re.search(pat, q_lower))
         struct_hits = sum(1 for pat in STRUCTURED_EVIDENCE_MARKERS if re.search(pat, q_lower))
 

@@ -68,20 +68,20 @@ def evaluate_gate_b_confidence(
             src = c.get("source", "fusion")
             agreeing_sources.add(src)
 
-    # Max 4 sources (clip, asr, metadata, ocr/object)
+    # Max 4 sources (clip/vision, asr, metadata, ocr/object)
     agreement_score = min(1.0, len(agreeing_sources) / 3.0)
 
     # 3. Coverage Score
     coverage_score = 0.5
     if refined_query:
-        attr = refined_query.target_attribute
-        if attr == "text_ocr" and top1.get("ocr_text"):
+        modalities = getattr(refined_query.analysis, "modalities", [])
+        if "ocr" in modalities and top1.get("ocr_text"):
             coverage_score = 1.0
-        elif attr == "speech_asr" and top1.get("asr_text"):
+        elif "asr" in modalities and top1.get("asr_text"):
             coverage_score = 1.0
-        elif attr == "metadata" and top1.get("description"):
+        elif "metadata" in modalities and top1.get("description"):
             coverage_score = 1.0
-        elif top1.get("source") == "clip":
+        elif top1.get("source") in ["clip", "vision"]:
             coverage_score = 0.7
 
     # Weighted Confidence Formula
